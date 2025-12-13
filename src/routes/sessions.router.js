@@ -1,29 +1,33 @@
 import { Router } from "express";
-import { userModel } from "../dao/models/user.model.js";
+import UserModel from "../dao/models/user.model.js";
 import { createHash, isValidPassword } from "../utils/bcrypt.js";
 import { generateToken } from "../utils/jwt.js";
 import passport from "passport";
+import UserDTO from "../dto/user.dto.js";
+import {
+  forgotPassword,
+  resetPassword
+} from "../controllers/sessions.controller.js";
 
 const router = Router();
 
-// Mostrar formulario de registro
-router.get("/register", (req, res) => {
-  res.render("register");
-});
+/*REGISTRO*/
 
-// Registro
 router.post("/register", async (req, res) => {
   try {
-    console.log("BODY RECIBIDO:", req.body);
-
     const { first_name, last_name, email, age, password } = req.body;
 
-    const exists = await userModel.findOne({ email });
-    if (exists) return res.status(400).send({ message: "Usuario ya existe" });
+    if (!password) {
+      return res.status(400).send({ error: "Password no llegó al backend" });
+    }
 
     const hashedPassword = createHash(password);
 
-    const newUser = await userModel.create({
+    const exists = await UserModel.findOne({ email });
+    if (exists)
+      return res.status(400).send({ message: "Usuario ya existe" });
+
+    const newUser = await UserModel.create({
       first_name,
       last_name,
       email,
@@ -31,20 +35,24 @@ router.post("/register", async (req, res) => {
       password: hashedPassword
     });
 
-    res.status(201).send({ message: "Usuario registrado", user: newUser });
+    res.status(201).send({
+      message: "Usuario registrado",
+      user: newUser
+    });
   } catch (error) {
-    console.error("❌ Error al registrar usuario:", error);
-    res.status(500).send({ error: error.message }); 
+    res.status(500).send({ error: error.message });
   }
 });
 
-// Login
+/*LOGIN*/
+
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await userModel.findOne({ email });
-    if (!user) return res.status(400).send({ message: "Usuario no encontrado" });
+    const user = await UserModel.findOne({ email });
+    if (!user)
+      return res.status(400).send({ message: "Usuario no encontrado" });
 
     if (!isValidPassword(user, password))
       return res.status(401).send({ message: "Contraseña incorrecta" });
@@ -52,24 +60,34 @@ router.post("/login", async (req, res) => {
     const token = generateToken({
       id: user._id,
       email: user.email,
-      role: user.role,
+      role: user.role
     });
 
     res
       .cookie("jwtCookie", token, { httpOnly: true })
       .send({ message: "Login exitoso", token });
   } catch (error) {
-    res.status(500).send({ error });
+    res.status(500).send({ error: error.message });
   }
 });
 
-// Ruta protegida
+/*CURRENT (PROTEGIDA)*/
+
 router.get(
   "/current",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    res.send({ status: "success", user: req.user });
+    const userDTO = new UserDTO(req.user);
+    res.send({
+      status: "success",
+      user: userDTO
+    });
   }
 );
+
+/*PASSWORD RESET*/
+
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
 
 export default router;

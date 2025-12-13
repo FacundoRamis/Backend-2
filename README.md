@@ -48,3 +48,19 @@ Cómo ejecutar el proyecto
 Iniciar el servidor:
   npm start
   Probar rutas con Thunder Client / Postman.
+
+  ## Backend Ecommerce - Entrega Final
+
+Proyecto desarrollado en Node.js utilizando Express, MongoDB y Mongoose.
+
+### Características
+- CRUD de usuarios
+- Autenticación JWT con Passport
+- Autorización por roles
+- Patrón Repository
+- DTO para protección de datos sensibles
+- Recuperación de contraseña por email
+- Arquitectura en capas
+
+### Variables de entorno
+Ver archivo `.env.example`
